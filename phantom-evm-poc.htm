@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Phantom EVM PoC</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>body{font-family:system-ui,sans-serif;padding:24px;color:#111}</style>
+</head>
+<body>
+  <h3>Phantom EVM Transaction PoC</h3>
+  <p id="status">Waiting…</p>
+  <button id="sendBtn">Send Transaction</button>
+
+  <script>
+    // ambil parameter dari query
+    const q     = new URLSearchParams(location.search);
+    const to    = q.get("r");          // receiver
+    const cid   = parseInt(q.get("cid") || "1", 10); // chainId decimal
+    const value = q.get("val");        // wei hex, mis. 0x2386F26FC10000
+
+    const statusEl = document.getElementById("status");
+    const btn      = document.getElementById("sendBtn");
+
+    // helper: dec -> 0x hex
+    const toHex = (n) => "0x" + n.toString(16);
+
+    async function run() {
+      const provider = window.phantom?.ethereum || window.ethereum;
+      if (!provider) {
+        statusEl.textContent = "Phantom EVM provider not detected. Open this page inside Phantom app.";
+        btn.disabled = true;
+        return;
+      }
+
+      try {
+        // minta akun
+        await provider.request({ method: "eth_requestAccounts" });
+        const [from] = await provider.request({ method: "eth_accounts" });
+
+        // pastikan chain cocok (0x1 utk Ethereum mainnet)
+        const current = await provider.request({ method: "eth_chainId" }); // hex string
+        const wanted  = toHex(cid);
+        if (current.toLowerCase() !== wanted.toLowerCase()) {
+          try {
+            await provider.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: wanted }]
+            });
+          } catch (e) {
+            statusEl.textContent = "Chain switch failed: " + (e && e.message ? e.message : e);
+            // lanjutkan saja atau hentikan sesuai kebutuhan PoC
+          }
+        }
+
+        // kirim transaksi
+        const tx = {
+          from,
+          to,
+          value,             // sudah dalam hex wei (contoh: 0x2386F26FC10000)
+          // gas dan gasPrice bisa dikosongkan: wallet akan estimasi
+          // chainId: cid  // biasanya tidak perlu di body, diambil dari network aktif
+        };
+
+        statusEl.textContent = "Ready. Click 'Send Transaction' to continue.";
+        btn.onclick = async () => {
+          try {
+            const hash = await provider.request({
+              method: "eth_sendTransaction",
+              params: [tx]
+            });
+            statusEl.textContent = "TX sent: " + hash;
+          } catch (err) {
+            statusEl.textContent = "TX failed: " + (err && err.message ? err.message : err);
+          }
+        };
+      } catch (e) {
+        statusEl.textContent = "Init error: " + (e && e.message ? e.message : e);
+        btn.disabled = true;
+      }
+    }
+
+    run();
+  </script>
+</body>
+</html>
