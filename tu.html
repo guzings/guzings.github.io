@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<body>
+<button id="test">Run Android in-app test</button>
+<script>
+document.getElementById('test').onclick = () => {
+  const w = window.open('', '_blank');
+  if (!w) return alert('window.open blocked in this context');
+  w.document.write('<h1>Benign Test</h1><p>No data collection. Checking UI behavior only.</p>');
+  w.document.close();
+
+  let i = 0;
+  const attempts = 250;
+  const timer = setInterval(() => {
+    try { w.location.replace('https://google.com:81'); } catch(e){}
+    if (++i >= attempts) clearInterval(timer);
+  }, 20);
+};
+</script>
+</body>
+</html>
