@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<button id="go">Open test</button>
+<script>
+document.getElementById('go').onclick = () => {
+  const w = window.open('', '_blank');        // In FB Android this may be sandboxed
+  if (!w) return alert('window.open blocked');
+  w.document.write('<h2>Benign Test Page</h2><p>This is a spoof test (no data collection).</p>');
+  w.document.close();
+  // Try to “pin” the address bar on a trusted host with a dead/blocked port
+  let ticks = 0;
+  const t = setInterval(() => {
+    try { w.location.replace('https://www.google.com:81'); } catch(e){}
+    if (++ticks > 300) clearInterval(t);
+  }, 20);
+};
+</script>
