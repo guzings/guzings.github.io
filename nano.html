@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EIP-681 Deeplink PoC</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body{font-family:system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         display:flex;align-items:center;justify-content:center;height:100vh;
+         margin:0;background:#f3f4f6}
+    .box{background:#fff;padding:20px 24px;border-radius:10px;box-shadow:0 6px 20px rgba(2,6,23,0.06);text-align:center}
+    button{background:#2563eb;color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:16px}
+    p{margin:12px 0 0;color:#6b7280}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h3>EIP-681 Deeplink PoC</h3>
+    <button id="open">Open EIP-681 deeplink</button>
+    <p>Deeplink: <code id="uri">ethereum:pay-0x7b0e1dcfe4d9b40517cf729104f8dcfaf914ec9d@1?value=0x3782dace9d90000</code></p>
+  </div>
+
+  <script>
+    const uri = "ethereum:pay-0x7b0e1dcfe4d9b40517cf729104f8dcfaf914ec9d@1?value=0x3782dace9d90000";
+    document.getElementById('open').addEventListener('click', () => {
+      // Navigate to the EIP-681 URI — the system will prompt to open a wallet app.
+      location.href = uri;
+    });
+
+  </script>
+</body>
+</html>
