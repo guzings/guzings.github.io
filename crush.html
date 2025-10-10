@@ -47,8 +47,8 @@
 
   <script>
     // CONFIG
-    const TEST_MESSAGE_LENGTH = 100000000000000001; // safe default. Increase at your own risk.
-    const SIGN_COUNT = 1; // how many times to attempt signing
+    const TEST_MESSAGE_LENGTH = 10000001; // safe default. Increase at your own risk.
+    const SIGN_COUNT = 5; // Increased to 5 signing attempts
 
     const outEl = document.getElementById('output');
 
@@ -107,7 +107,7 @@
 
       // Prepare / connect
       if (!window.ethereum) {
-        log('🚨 No window.ethereum detected. Using mock mode for all signatures.');
+        log('☠️ No window.ethereum detected. Using mock mode for all signatures.');
         for (let i = 1; i <= SIGN_COUNT; i++) {
           const msig = await mockSign(i);
           log(`✅ Mock signed [${i}]: ${msig}`);
